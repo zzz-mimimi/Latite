@@ -197,23 +197,24 @@ JsValueRef GameScriptingObject::dimensionGetBlock(JsValueRef callee, bool isCons
 }
 
 JsValueRef GameScriptingObject::openModalForm(JsValueRef callee, bool isConstructor, JsValueRef* arguments, unsigned short argCount, void* callbackState) {
-	if (!Chakra::VerifyArgCount(argCount, 2)) return JS_INVALID_REFERENCE;
-	if (!Chakra::VerifyParameters({ {arguments[1], JsValueType::JsObject} })) return JS_INVALID_REFERENCE;
+	if (!Chakra::VerifyArgCount(argCount, 3)) return JS_INVALID_REFERENCE;
+	if (!Chakra::VerifyParameters({ {arguments[1], JsValueType::JsNumber} , {arguments[2], JsValueType::JsObject} })) return JS_INVALID_REFERENCE;
 
-	auto JSON = Chakra::GetProperty(Chakra::GetGlobalObject(), L"JSON");
-	auto func = Chakra::GetProperty(JSON, L"stringify");
-	JsValueRef stringifyArgs[2] = { JSON, arguments[1] };
+	int formId = Chakra::GetInt(arguments[1]);
+
+	JsValueRef JSON = Chakra::GetProperty(Chakra::GetGlobalObject(), L"JSON");
+	JsValueRef stringify = Chakra::GetProperty(JSON, L"stringify");
+	JsValueRef stringifyArgs[2] = { JSON, arguments[2] };
 	JsValueRef result;
-	Chakra::CallFunction(func, stringifyArgs, 2, &result);
+	Chakra::CallFunction(stringify, stringifyArgs, 2, &result);
 
 	using MFRP = SDK::ModalFormRequestPacket;
 
 	std::shared_ptr<MFRP> packet = std::static_pointer_cast<MFRP>(SDK::MinecraftPackets::createPacket(SDK::PacketID::MODAL_FORM_REQUEST));
 
-	packet->Id = 1'000'000;
+	packet->Id = formId;
 	packet->Json = util::WStrToStr(Chakra::GetString(result));
 
-	auto vft = *packet->handler;
 	memory::callVirtual<void>(packet->handler, 1, (void*)Latite::getNetId(), (void*)Latite::getNetEv(), (std::shared_ptr<MFRP>&)packet);
 
 	return Chakra::GetUndefined();

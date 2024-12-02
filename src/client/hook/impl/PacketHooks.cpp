@@ -21,10 +21,8 @@ void PacketHooks::PacketSender_sendToServer(SDK::PacketSender* sender, SDK::Pack
 
 	if (packet->getID() == SDK::PacketID::MODAL_FORM_RESPONSE) {
 		using MFRP = SDK::ModalFormResponsePacket;
-		using ValType = MFRP::Value::ValueType;
+		using ValType = MFRP::Value::Type;
 		auto pkt = static_cast<MFRP*>(packet);
-
-		if (pkt->Id == 1'000'000) return;
 
 		auto id = PluginManager::Event::Value(L"id");
 		id.val = (double)pkt->Id;
@@ -36,23 +34,28 @@ void PacketHooks::PacketSender_sendToServer(SDK::PacketSender* sender, SDK::Pack
 		cancelreason.val = L"";
 
 		if (pkt->Json.has_value()) {
-			MFRP::Value jsonValue = pkt->Json.value();
+			MFRP::Value value = pkt->Json.value();
 
-			switch (jsonValue.bits_.value_type_) {
+			switch (value.bits_.type_) {
 			case ValType::Int:
-				json.val = (double)jsonValue.value_.int_;
+				json.val = (double)value.value_.int_;
 				break;
 			case ValType::Uint:
-				json.val = (double)jsonValue.value_.uint_;
+				json.val = (double)value.value_.uint_;
 				break;
 			case ValType::Real:
-				json.val = (double)jsonValue.value_.real_;
+				json.val = (double)value.value_.real_;
 				break;
 			case ValType::String:
-				json.val = util::StrToWStr(jsonValue.value_.string_);
+				json.val = util::StrToWStr(value.value_.string_);
 				break;
 			case ValType::Boolean:
-				json.val = jsonValue.value_.bool_;
+				json.val = value.value_.bool_;
+				break;
+			case ValType::Array:
+				for (auto&& [key, val] : *value.value_.map_) {
+					
+				}
 				break;
 			default:
 				json.val = L"Not Implemented";
@@ -63,8 +66,11 @@ void PacketHooks::PacketSender_sendToServer(SDK::PacketSender* sender, SDK::Pack
 			cancelreason.val = pkt->CancelReason.value() == MFRP::Reason::UserBusy ? L"UserBusy" : L"UserClosed";
 		}
 
-		PluginManager::Event sEv{ XW("modal-response"), { id,  json, cancelreason }, false };
-		Latite::getPluginManager().dispatchEvent(sEv);
+		PluginManager::Event sEv{ XW("modal-response"), { id,  json, cancelreason }, true };
+
+		if (Latite::getPluginManager().dispatchEvent(sEv)) {
+			return;
+		};
 	}
 
 	SendToServerHook->oFunc<decltype(&PacketSender_sendToServer)>()(sender, packet);

@@ -6,14 +6,9 @@ namespace SDK {
 
     class ModalFormResponsePacket : public Packet {
     public:
-        enum class Reason : signed char {
-            UserClosed = 0x0,
-            UserBusy = 0x1,
-        };
-
         class Value {
         public:
-            enum class ValueType : int {
+            enum class Type : int {
                 Null = 0x0,
                 Int = 0x1,
                 Uint = 0x2,
@@ -26,41 +21,41 @@ namespace SDK {
 
             class CZString {
             public:
-                enum class DuplicationPolicy : unsigned int {
+                enum class Policy : unsigned int {
                     noDuplication = 0,
                     duplicate = 1,
                     duplicateOnCopy = 2,
                     Mask = 3,
                 };
 
-                struct StringStorage {
-                    DuplicationPolicy policy_ : 2;
-                    unsigned int              length_ : 30;
-                };
-
                 char const* cstr_;
                 union {
                     unsigned int index_;
-                    StringStorage storage_;
+                    struct {
+                        Policy       policy_ : 2;
+                        unsigned int length_ : 30;
+                    } storage_;
                 };
             };
 
-            struct CZStringCompare {};
-
-            union ValueHolder {
+            union {
                 int64_t                    int_;
                 uint64_t                   uint_;
                 double                     real_;
                 bool                       bool_;
                 char*                      string_;
                 std::map<CZString, Value>* map_;
-            };
-
-            ValueHolder value_;
+            } value_;
+   
             struct {
-                ValueType value_type_ : 8;
-                bool      allocated_ : 1;
+                Type type_      : 8;
+                bool allocated_ : 1;
             } bits_;
+        };
+
+        enum class Reason : signed char {
+            UserClosed = 0x0,
+            UserBusy = 0x1,
         };
 
         unsigned int                Id;
