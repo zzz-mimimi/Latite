@@ -476,7 +476,12 @@ void Latite::threadsafeInit() {
 
     auto app = winrt::Windows::UI::ViewManagement::ApplicationView::GetForCurrentView();
     std::string vstr(this->version);
-    auto ws = util::StrToWStr(XOR_STRING("Latite Client ") + vstr);
+#ifdef LATITE_NIGHTLY
+    auto ws = util::StrToWStr("Latite Client [NIGHTLY] " + std::string(__DATE__) + " " + std::string(__TIME__) + " game version " + gameVersion);
+#else
+    auto ws = util::StrToWStr("Latite Client " + vstr);
+#endif
+
     app.Title(ws);
     Latite::getPluginManager().loadPrerunScripts();
     Logger::Info(XOR_STRING("Loaded startup scripts"));
