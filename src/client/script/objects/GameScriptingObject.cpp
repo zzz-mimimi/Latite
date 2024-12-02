@@ -22,6 +22,7 @@
 #include <client/script/class/impl/game/JsBlock.h>
 #include <client/script/class/impl/JsVec3.h>
 #include "sdk/common/network/MinecraftPackets.h"
+#include <sdk/common/network/packet/ModalFormRequestPacket.h>
 
 void GameScriptingObject::initialize(JsContextRef ctx, JsValueRef parentObj) {
 	this->createWorldObject();
@@ -44,6 +45,7 @@ void GameScriptingObject::initialize(JsContextRef ctx, JsValueRef parentObj) {
 	Chakra::DefineFunc(object, captureCursor, XW("captureCursor"));
 	Chakra::DefineFunc(object, releaseCursor, XW("releaseCursor"));
 	Chakra::DefineFunc(object, isKeyDown, XW("isKeyDown"));
+	Chakra::DefineFunc(object, openModalForm, XW("openModalForm"));
 }
 
 void GameScriptingObject::createWorldObject() {
@@ -192,6 +194,29 @@ JsValueRef GameScriptingObject::dimensionGetBlock(JsValueRef callee, bool isCons
 	}
 	
 	return scr->getClass<JsBlock>()->construct(block, false);
+}
+
+JsValueRef GameScriptingObject::openModalForm(JsValueRef callee, bool isConstructor, JsValueRef* arguments, unsigned short argCount, void* callbackState) {
+	if (!Chakra::VerifyArgCount(argCount, 2)) return JS_INVALID_REFERENCE;
+	if (!Chakra::VerifyParameters({ {arguments[1], JsValueType::JsObject} })) return JS_INVALID_REFERENCE;
+
+	auto JSON = Chakra::GetProperty(Chakra::GetGlobalObject(), L"JSON");
+	auto func = Chakra::GetProperty(JSON, L"stringify");
+	JsValueRef stringifyArgs[2] = { JSON, arguments[1] };
+	JsValueRef result;
+	Chakra::CallFunction(func, stringifyArgs, 2, &result);
+
+	using MFRP = SDK::ModalFormRequestPacket;
+
+	std::shared_ptr<MFRP> packet = std::static_pointer_cast<MFRP>(SDK::MinecraftPackets::createPacket(SDK::PacketID::MODAL_FORM_REQUEST));
+
+	packet->Id = 1'000'000;
+	packet->Json = util::WStrToStr(Chakra::GetString(result));
+
+	auto vft = *packet->handler;
+	memory::callVirtual<void>(packet->handler, 1, (void*)Latite::getNetId(), (void*)Latite::getNetEv(), (std::shared_ptr<MFRP>&)packet);
+
+	return Chakra::GetUndefined();
 }
 
 JsValueRef GameScriptingObject::getMousePosCallback(JsValueRef callee, bool isConstructor, JsValueRef* arguments, unsigned short argCount, void* callbackState) {

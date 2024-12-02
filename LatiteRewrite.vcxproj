@@ -577,6 +577,8 @@
     <ClInclude Include="src\sdk\common\network\PacketSender.h" />
     <ClInclude Include="src\sdk\common\network\packet\ActorEventPacket.h" />
     <ClInclude Include="src\sdk\common\network\packet\CommandRequestPacket.h" />
+    <ClInclude Include="src\sdk\common\network\packet\ModalFormRequestPacket.h" />
+    <ClInclude Include="src\sdk\common\network\packet\ModalFormResponsePacket.h" />
     <ClInclude Include="src\sdk\common\network\packet\SetScorePacket.h" />
     <ClInclude Include="src\sdk\common\network\packet\SetTitlePacket.h" />
     <ClInclude Include="src\sdk\common\network\packet\TextPacket.h" />
@@ -588,6 +590,7 @@
     <ClInclude Include="src\sdk\common\world\actor\player\GameMode.h" />
     <ClInclude Include="src\sdk\common\world\actor\player\Inventory.h" />
     <ClInclude Include="src\sdk\common\world\actor\player\PlayerInventory.h" />
+    <ClInclude Include="src\sdk\common\world\actor\player\SerializedSkin.h" />
     <ClInclude Include="src\sdk\common\world\Attribute.h" />
     <ClInclude Include="src\sdk\common\world\Item.h" />
     <ClInclude Include="src\sdk\common\world\ItemStack.h" />

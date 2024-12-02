@@ -19,6 +19,54 @@ void PacketHooks::PacketSender_sendToServer(SDK::PacketSender* sender, SDK::Pack
 		return;
 	}
 
+	if (packet->getID() == SDK::PacketID::MODAL_FORM_RESPONSE) {
+		using MFRP = SDK::ModalFormResponsePacket;
+		using ValType = MFRP::Value::ValueType;
+		auto pkt = static_cast<MFRP*>(packet);
+
+		if (pkt->Id == 1'000'000) return;
+
+		auto id = PluginManager::Event::Value(L"id");
+		id.val = (double)pkt->Id;
+
+		auto json = PluginManager::Event::Value(L"json");
+		json.val = L"";
+
+		auto cancelreason = PluginManager::Event::Value(L"cancelreason");
+		cancelreason.val = L"";
+
+		if (pkt->Json.has_value()) {
+			MFRP::Value jsonValue = pkt->Json.value();
+
+			switch (jsonValue.bits_.value_type_) {
+			case ValType::Int:
+				json.val = (double)jsonValue.value_.int_;
+				break;
+			case ValType::Uint:
+				json.val = (double)jsonValue.value_.uint_;
+				break;
+			case ValType::Real:
+				json.val = (double)jsonValue.value_.real_;
+				break;
+			case ValType::String:
+				json.val = util::StrToWStr(jsonValue.value_.string_);
+				break;
+			case ValType::Boolean:
+				json.val = jsonValue.value_.bool_;
+				break;
+			default:
+				json.val = L"Not Implemented";
+			}
+		}
+
+		if (pkt->CancelReason.has_value()) {
+			cancelreason.val = pkt->CancelReason.value() == MFRP::Reason::UserBusy ? L"UserBusy" : L"UserClosed";
+		}
+
+		PluginManager::Event sEv{ XW("modal-response"), { id,  json, cancelreason }, false };
+		Latite::getPluginManager().dispatchEvent(sEv);
+	}
+
 	SendToServerHook->oFunc<decltype(&PacketSender_sendToServer)>()(sender, packet);
 }
 
@@ -29,6 +77,8 @@ std::shared_ptr<SDK::Packet> PacketHooks::MinecraftPackets_createPacket(SDK::Pac
 }
 
 void PacketHooks::PacketHandlerDispatcherInstance_handle(void* instance, void* networkIdentifier, void* netEventCallback, std::shared_ptr<SDK::Packet>& packet) {
+	Latite::setNetwork(networkIdentifier, netEventCallback);
+
 	auto& hook = PacketHookArray[(size_t)packet->getID()];
 
 	if (Latite::isMainThread()) {
@@ -48,6 +98,18 @@ void PacketHooks::PacketHandlerDispatcherInstance_handle(void* instance, void* n
 			data.val = pkt->serialize();
 
 			PluginManager::Event sEv{ XW("set-score"), { data }, false };
+			Latite::getPluginManager().dispatchEvent(sEv);
+		}
+		else if (packetId == SDK::PacketID::MODAL_FORM_REQUEST) {
+			auto pkt = std::static_pointer_cast<SDK::ModalFormRequestPacket>(packet);
+
+			auto id = PluginManager::Event::Value(L"id");
+			id.val = (double)pkt->Id;
+
+			auto json = PluginManager::Event::Value(L"json");
+			json.val = util::StrToWStr(pkt->Json);
+
+			PluginManager::Event sEv{ XW("modal-request"), { id, json }, false };
 			Latite::getPluginManager().dispatchEvent(sEv);
 		}
 		else if (packetId == SDK::PacketID::TRANSFER) {
